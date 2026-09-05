@@ -35,7 +35,7 @@ GSL_VERSION=2.1
 
 # Other shorthands.
 TAR="tar --keep-newer-files"
-
+export CFLAGS="${CFLAGS:--O3 -Wno-error=implicit-function-declaration}"
 # Flags. By default all are disabled.
 INSTALL_CMAKE=
 INSTALL_HDF5=
