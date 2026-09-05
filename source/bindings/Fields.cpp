@@ -42,19 +42,19 @@ struct PyFieldView
   void loadUniform(py::array_t<Real, py::array::c_style> in)
   {
     _checkShape(in);
-    importGridFieldFromUniformMatrix(sim->sim.grid, component, in.data());
+    importGridFieldFromUniformMatrix(sim->sim, component, in.data());
   }
 
   auto toUniform(py::array_t<Real, py::array::c_style> out) const
   {
     _checkShape(out);
-    exportGridFieldToUniformMatrix(sim->sim.grid, component, out.mutable_data());
+    exportGridFieldToUniformMatrix(sim->sim, component, out.mutable_data());
     return out;
   }
 
   void _checkShape(const py::array_t<Real, py::array::c_style> &out) const
   {
-    const auto numCells = sim->sim.grid->getMaxMostRefinedCells();
+    const auto numCells = sim->sim.vel->getMaxMostRefinedCells();
     if (out.ndim() != 3
         || out.shape(2) != numCells[0]
         || out.shape(1) != numCells[1]

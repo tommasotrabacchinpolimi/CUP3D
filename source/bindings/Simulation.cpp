@@ -54,6 +54,7 @@ static std::shared_ptr<Simulation> pyCreateSimulation(
   // In Python, pass `MPI._addressof(comm)` as the value of the `comm` argument.
   MPI_Comm comm = commPtr ? *(MPI_Comm *)commPtr : MPI_COMM_WORLD;
   auto sim = createSimulation(comm, argv);
+  sim->init();
   sim->sim.pipeline.push_back(std::make_shared<SIGINTHandler>(sim->sim));
   return sim;
 }
@@ -65,14 +66,16 @@ void bindSimulation(py::module &m)
     .def_readonly("data", &Simulation::sim,
                   py::return_value_policy::reference_internal)
     .def_property_readonly("fields", [](Simulation *sim) { return PyFieldsView{sim}; })
-    .def_property_readonly("obstacles", &Simulation::getObstacleVector)
+    .def_property_readonly("obstacles", &Simulation::getShapes)
     .def("add_obstacle", &pySimulationAddObstacle)
     .def("add_obstacle", &pySimulationParseAndAddObstacle)
     .def("adapt_mesh", &Simulation::adaptMesh)
     .def("compute_vorticity", &Simulation::computeVorticity,
          "compute vorticity and store to tmpU, tmpV and tmpW fields")
     .def("insert_operator", &Simulation::insertOperator, "op"_a)
-    .def("run", &Simulation::run);
+    .def("init", &Simulation::init)
+    .def("simulate", &Simulation::simulate)
+    .def("run", &Simulation::simulate);
 }
 
 CubismUP_3D_NAMESPACE_END

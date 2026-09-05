@@ -1,4 +1,4 @@
 [submodule "Cubism"]
 	path = Cubism
-	url = git@github.com:cselab/Cubism.git
+	url = https://github.com/cselab/Cubism.git
         branch = amr

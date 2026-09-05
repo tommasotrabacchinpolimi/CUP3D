@@ -66,31 +66,38 @@ include("${ROOT_DIR}/cmake/Dependencies.cmake")
 
 # Targets.
 set(CORE_SOURCE
-    "${SRC_DIR}/obstacles/CarlingFish.cpp"
-    "${SRC_DIR}/obstacles/Cylinder.cpp"
-    "${SRC_DIR}/obstacles/Ellipsoid.cpp"
-    "${SRC_DIR}/obstacles/ExternalObstacle.cpp"
-    "${SRC_DIR}/obstacles/Fish.cpp"
-    "${SRC_DIR}/obstacles/FishLibrary.cpp"
-    "${SRC_DIR}/obstacles/FishShapes.cpp"
-    "${SRC_DIR}/obstacles/Naca.cpp"
-    "${SRC_DIR}/obstacles/Obstacle.cpp"
-    "${SRC_DIR}/obstacles/ObstacleFactory.cpp"
-    "${SRC_DIR}/obstacles/ObstacleVector.cpp"
-    "${SRC_DIR}/obstacles/Plate.cpp"
-    "${SRC_DIR}/obstacles/Sphere.cpp"
-    "${SRC_DIR}/obstacles/StefanFish.cpp"
+    "${SRC_DIR}/Obstacles/CarlingFish.cpp"
+    "${SRC_DIR}/Obstacles/Cylinder.cpp"
+    "${SRC_DIR}/Obstacles/CylinderNozzle.cpp"
+    "${SRC_DIR}/Obstacles/Ellipsoid.cpp"
+    "${SRC_DIR}/Obstacles/ExternalObstacle.cpp"
+    "${SRC_DIR}/Obstacles/Fish.cpp"
+    "${SRC_DIR}/Obstacles/FishLibrary.cpp"
+    "${SRC_DIR}/Obstacles/FishShapes.cpp"
+    "${SRC_DIR}/Obstacles/Naca.cpp"
+    "${SRC_DIR}/Obstacles/Obstacle.cpp"
+    "${SRC_DIR}/Obstacles/ObstacleFactory.cpp"
+    "${SRC_DIR}/Obstacles/Pipe.cpp"
+    "${SRC_DIR}/Obstacles/Plate.cpp"
+    "${SRC_DIR}/Obstacles/SmartNaca.cpp"
+    "${SRC_DIR}/Obstacles/Sphere.cpp"
+    "${SRC_DIR}/Obstacles/StefanFish.cpp"
     "${SRC_DIR}/operators/AdvectionDiffusion.cpp"
+    "${SRC_DIR}/operators/AdvectionDiffusionImplicit.cpp"
     "${SRC_DIR}/operators/ComputeDissipation.cpp"
+    "${SRC_DIR}/operators/ExternalForcing.cpp"
+    "${SRC_DIR}/operators/FixMassFlux.cpp"
     "${SRC_DIR}/operators/FluidSolidForces.cpp"
     "${SRC_DIR}/operators/InitialConditions.cpp"
     "${SRC_DIR}/operators/ObstaclesCreate.cpp"
     "${SRC_DIR}/operators/ObstaclesUpdate.cpp"
     "${SRC_DIR}/operators/Penalization.cpp"
     "${SRC_DIR}/operators/PressureProjection.cpp"
+    "${SRC_DIR}/poisson/DiffusionSolverAMRKernels.cpp"
     "${SRC_DIR}/poisson/PoissonSolverAMR.cpp"
     "${SRC_DIR}/poisson/PoissonSolverAMRKernels.cpp"
-    "${SRC_DIR}/utils/BufferedLogger.cpp"
+    "${SRC_DIR}/poisson/PoissonSolverBase.cpp"
+    "${SRC_DIR}/Utils/BufferedLogger.cpp"
     "${SRC_DIR}/Simulation.cpp"
     "${SRC_DIR}/SimulationData.cpp"
 )
@@ -112,7 +119,12 @@ else()
 endif()
 
 add_library(${PRIVATEDEP} INTERFACE)
-set(_PRIVATE_FLAGS -Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized -fmax-errors=3 ${_PRIVATE_FLAGS})
+set(_PRIVATE_FLAGS -Wall -Wextra -Wno-unused-parameter ${_PRIVATE_FLAGS})
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    list(APPEND _PRIVATE_FLAGS -Wno-maybe-uninitialized -fmax-errors=3)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang|IntelLLVM|Intel")
+    list(APPEND _PRIVATE_FLAGS -Wno-uninitialized -ferror-limit=3)
+endif()
 set(_PRIVATE_RELEASE_FLAGS
     -march=native
     -fstrict-aliasing
@@ -148,6 +160,9 @@ endif()
 
 if (CUP_BUILD_PY)
     if (NOT TARGET pybind11::pybind11)
+        if (DEFINED ENV{VIRTUAL_ENV} AND EXISTS "$ENV{VIRTUAL_ENV}/bin/python")
+            set(Python_EXECUTABLE "$ENV{VIRTUAL_ENV}/bin/python")
+        endif()
         find_package(Python COMPONENTS REQUIRED Interpreter Development)
         execute_process(
             COMMAND ${Python_EXECUTABLE} -m pybind11 --cmakedir

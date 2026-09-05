@@ -41,11 +41,11 @@ struct SimulationData
   ScalarGrid * lhs  = nullptr;
 
   // mesh refinement
-  ScalarAMR *  chi_amr;
-  ScalarAMR * pres_amr;
-  VectorAMR *  vel_amr;
-  VectorAMR * tmpV_amr;
-  ScalarAMR *  lhs_amr;
+  ScalarAMR *  chi_amr = nullptr;
+  ScalarAMR * pres_amr = nullptr;
+  VectorAMR *  vel_amr = nullptr;
+  VectorAMR * tmpV_amr = nullptr;
+  ScalarAMR *  lhs_amr = nullptr;
 
   // Get blocks on current rank
   inline std::vector<cubism::BlockInfo>&  chiInfo() const {return  chi->getBlocksInfo();}

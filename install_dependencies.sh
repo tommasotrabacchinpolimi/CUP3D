@@ -29,7 +29,7 @@ CMAKE_SHA_256='5255584bfd043eb717562cff8942d472f1c0e4679c4941d84baadaa9b28e3194 
 
 HDF5_VERSION=1.10.1
 HDF5_MD5='43a2f9466702fb1db31df98ae6677f15  hdf5-1.10.1.tar.gz'
-HDF5_URL='https://www.hdfgroup.org/package/source-gzip/?wpdmdl=4301&refresh=5afee8d8a45151526655192'
+HDF5_URL='https://support.hdfgroup.org/archive/support/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.1/src/hdf5-1.10.1.tar.gz'
 
 GSL_VERSION=2.1
 
@@ -111,7 +111,7 @@ fi
 
 if [ -n "$INSTALL_GSL" ]; then
     echo "Installing GSL ${GSL_VERSION}..."
-    wget -nc ftp://ftp.gnu.org/gnu/gsl/gsl-${GSL_VERSION}.tar.gz -P $SOURCES
+    wget -nc https://ftp.gnu.org/gnu/gsl/gsl-${GSL_VERSION}.tar.gz -P $SOURCES
     cd $SOURCES
     $TAR -xzvf gsl-${GSL_VERSION}.tar.gz
     cd gsl-${GSL_VERSION}

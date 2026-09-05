@@ -2,116 +2,72 @@
 #include "../Simulation.h"
 #include "../Obstacles/ObstacleVector.h"
 #include "../Obstacles/Sphere.h"
+#include <Cubism/ArgumentParser.h>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
+#include <memory>
+#include <string>
+#include <vector>
 
 using namespace pybind11::literals;
 namespace py = pybind11;
 
 CubismUP_3D_NAMESPACE_BEGIN
 
-// TODO: Fix the init phase. Currently it is not really possible to add
-// obstaces dynamically, because they have to be initialized in the middle of
-// Simulation::init(). The solution would be to split init() in half.
-// TODO: Refactor the complicated ObstacleArguments interface.
+namespace {
 
-#define ATTR_FROM_KWARGS(o, item) \
-      do { \
-        (o).item = py::cast<decltype((o).item)>(kwargs_pop(#item, (o).item)); \
-      } while(0)
-static ObstacleArguments popObstacleArguments(py::object &kwargs_pop)
+struct ArgvStorage
 {
-  ObstacleArguments o;
-  ATTR_FROM_KWARGS(o, length);
-  ATTR_FROM_KWARGS(o, position);
-  ATTR_FROM_KWARGS(o, quaternion);
-  ATTR_FROM_KWARGS(o, enforcedVelocity);
-  ATTR_FROM_KWARGS(o, bForcedInSimFrame);
-  ATTR_FROM_KWARGS(o, bFixFrameOfRef);
-  ATTR_FROM_KWARGS(o, bFixToPlanar);
-  return o;
-}
-static SphereArguments popSphereArguments(py::object &kwargs_pop)
-{
-  SphereArguments s(py::cast<double>(kwargs_pop("radius")));
-  ATTR_FROM_KWARGS(s, umax);
-  ATTR_FROM_KWARGS(s, tmax);
-  ATTR_FROM_KWARGS(s, accel_decel);
-  ATTR_FROM_KWARGS(s, bHemi);
-  return s;
-}
-#undef ATTR_FROM_KWARGS
+  std::vector<std::string> args;
+  std::vector<char *> argv;
 
-static std::shared_ptr<ObstacleAndSphereArguments> createObstacleAndSphereArguments(
-    double radius, double umax, double tmax, bool accel_decel, bool bHemi,
-    py::kwargs kwargs)
-{
-  // for (const auto &item : kwargs) {
-  //   fprintf(stderr, "[%s]=%s\n",
-  //       py::cast<std::string>(py::str(item.first)).c_str(),
-  //       py::cast<std::string>(py::str(item.second)).c_str());
-  // }
-  py::object kwargs_pop = kwargs.attr("pop");
-
-  double length = py::cast<double>(kwargs_pop("length", 0.0));
-  if (radius > 0 && length > 0 && radius != 0.5 * length) {
-    throw std::invalid_argument("cannot specify both `radius` and `length`");
-  } else if (radius <= 0 && length <= 0) {
-    throw std::invalid_argument("expected a `radius` or `length`");
-  } else if (radius > 0) {
-    length = 2.0 * radius;
-  } else {
-    radius = 0.5 * length;
+  explicit ArgvStorage(const std::vector<std::string> &in)
+  {
+    args = in;
+    if (args.empty())
+      args.emplace_back("prg");
+    argv.reserve(args.size());
+    for (auto &s : args)
+      argv.push_back(const_cast<char *>(s.data()));
   }
+};
 
-  kwargs["radius"] = radius;
-  kwargs["length"] = length;
-
-  // TODO: throw std:invalid_argument if kwargs not empty after construction.
-  return std::make_shared<ObstacleAndSphereArguments>(
-      popObstacleArguments(kwargs_pop),
-      popSphereArguments(kwargs_pop));
+static ArgvStorage kwargsToArgv(const py::kwargs &kwargs)
+{
+  std::vector<std::string> args{"prg"};
+  for (auto item : kwargs) {
+    args.emplace_back("-" + py::cast<std::string>(py::str(item.first)));
+    args.emplace_back(py::cast<std::string>(py::str(item.second)));
+  }
+  return ArgvStorage(args);
 }
+
+static std::shared_ptr<Sphere> createSphere(SimulationData &sim, py::kwargs kwargs)
+{
+  if (!kwargs.contains("L") && kwargs.contains("radius"))
+    kwargs["L"] = 2.0 * py::cast<double>(kwargs["radius"]);
+  auto storage = kwargsToArgv(kwargs);
+  cubism::ArgumentParser parser((int)storage.argv.size(), storage.argv.data());
+  return std::make_shared<Sphere>(sim, parser);
+}
+
+}  // namespace
 
 void bindObstacles(py::module &m)
 {
-  /* ObstacleArguments */
-  py::class_<ObstacleArguments, std::shared_ptr<ObstacleArguments>>(m, "ObstacleArguments")
-    .def_readwrite("length", &ObstacleArguments::length)
-    .def_readwrite("position", &ObstacleArguments::position)
-    .def_readwrite("enforcedVelocity", &ObstacleArguments::enforcedVelocity)
-    .def_readwrite("bForcedInSimFrame", &ObstacleArguments::bForcedInSimFrame)
-    .def_readwrite("bFixFrameOfRef", &ObstacleArguments::bFixFrameOfRef)
-    .def_readwrite("bFixToPlanar", &ObstacleArguments::bFixToPlanar);
-
-  /* Obstacle */
   py::class_<Obstacle, std::shared_ptr<Obstacle>>(m, "Obstacle")
     .def_readwrite("v_imposed", &Obstacle::transVel_imposed);
 
-  /* SphereArguments */
-  SphereArguments sa(0.1);  // Default arguments.
-  py::class_<SphereArguments, std::shared_ptr<SphereArguments>>(m, "SphereArguments")
-    .def_readonly("radius", &SphereArguments::radius)
-    .def_readwrite("umax", &SphereArguments::umax)
-    .def_readwrite("tmax", &SphereArguments::tmax)
-    .def_readwrite("accel_decel", &SphereArguments::accel_decel)
-    .def_readwrite("bHemi", &SphereArguments::bHemi);
-
-  /* ObstacleAndSphereArguments */
-  py::class_<ObstacleAndSphereArguments,
-             ObstacleArguments,
-             SphereArguments,
-             std::shared_ptr<ObstacleAndSphereArguments>>(m, "Sphere")
-      .def(py::init(&createObstacleAndSphereArguments),
-           "radius"_a,
-           "umax"_a = sa.umax,
-           "tmax"_a = sa.tmax,
-           "accel_decel"_a = sa.accel_decel,
-           "bHemi"_a = sa.bHemi);
-
-  /* Sphere */
   py::class_<Sphere, Obstacle, std::shared_ptr<Sphere>>(m, "SphereObstacle")
-    .def(py::init<SimulationData &, ObstacleAndSphereArguments>());
+    .def(py::init([](SimulationData &sim, py::kwargs kwargs) {
+           return createSphere(sim, std::move(kwargs));
+         }),
+         "sim"_a)
+    .def_readonly("radius", &Sphere::radius)
+    .def_readwrite("umax", &Sphere::umax)
+    .def_readwrite("tmax", &Sphere::tmax)
+    .def_readwrite("accel_decel", &Sphere::accel_decel)
+    .def_readwrite("bHemi", &Sphere::bHemi);
 }
 
 void pySimulationAddObstacle(Simulation &s, std::shared_ptr<Obstacle> obstacle)
@@ -121,12 +77,15 @@ void pySimulationAddObstacle(Simulation &s, std::shared_ptr<Obstacle> obstacle)
 
 void pySimulationParseAndAddObstacle(Simulation &S, pybind11::object obstacle_args)
 {
-  if (py::isinstance<ObstacleAndSphereArguments>(obstacle_args)) {
-    auto args = py::cast<ObstacleAndSphereArguments>(obstacle_args);
-    S.sim.obstacle_vector->addObstacle(std::make_shared<Sphere>(S.sim, args));
-  } else {
-    throw std::invalid_argument(py::str(obstacle_args));
+  if (py::isinstance<Sphere>(obstacle_args)) {
+    S.sim.obstacle_vector->addObstacle(py::cast<std::shared_ptr<Sphere>>(obstacle_args));
+    return;
   }
+  if (py::isinstance<Obstacle>(obstacle_args)) {
+    S.sim.obstacle_vector->addObstacle(py::cast<std::shared_ptr<Obstacle>>(obstacle_args));
+    return;
+  }
+  throw std::invalid_argument(py::str(obstacle_args));
 }
 
 CubismUP_3D_NAMESPACE_END

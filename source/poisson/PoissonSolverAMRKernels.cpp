@@ -159,16 +159,16 @@ static inline Real subAndSumSqr(
   return sum(s);
 }
 
-template <typename T>
-static inline T *assumeAligned(T *ptr, unsigned align, unsigned offset = 0)
+template <unsigned Align, unsigned Offset = 0, typename T>
+static inline T *assumeAligned(T *ptr)
 {
   if (sizeof(Real) == 8 || sizeof(Real) == 4) {
-    // if ((uintptr_t)ptr % align != offset)
+    // if ((uintptr_t)ptr % Align != Offset)
     //   throw std::runtime_error("wrong alignment");
-    assert((uintptr_t)ptr % align == offset);
+    assert((uintptr_t)ptr % Align == Offset);
 
-    // Works with gcc, clang and icc.
-    return (T *)__builtin_assume_aligned(ptr, align, offset);
+    // Alignment/offset must be compile-time constants for IntelLLVM/Clang.
+    return (T *)__builtin_assume_aligned(ptr, Align, Offset);
   } else {
     return ptr;  // No alignment assumptions for long double.
   }
@@ -184,12 +184,12 @@ Real kernelPoissonGetZInner(
     const Real sqrNorm0,
     const Real rr)
 {
-  PaddedBlock &p = *assumeAligned(&p_, 64, 64 - xPad * sizeof(Real));
+  PaddedBlock &p = *assumeAligned<64, 64 - xPad * sizeof(Real)>(&p_);
   const PaddedBlock &pW = *(PaddedBlock *)pW_;  // Aligned to 64B + 24 (for doubles).
   const PaddedBlock &pE = *(PaddedBlock *)pE_;  // Aligned to 64B + 40 (for doubles).
-  Block & __restrict__ Ax = *assumeAligned(&Ax_, 64);
-  Block & __restrict__ r = *assumeAligned(&r_, 64);
-  Block & __restrict__ block = *assumeAligned(&block_, kBlockAlignment);
+  Block & __restrict__ Ax = *assumeAligned<64>(&Ax_);
+  Block & __restrict__ r = *assumeAligned<64>(&r_);
+  Block & __restrict__ block = *assumeAligned<(unsigned)kBlockAlignment>(&block_);
 
   // Broadwell: 6.0-6.6 FLOP/cycle, depending probably on array alignments.
   Real a2Partial[NX] = {};

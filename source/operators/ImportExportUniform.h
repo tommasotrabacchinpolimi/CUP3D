@@ -9,17 +9,28 @@
 #pragma once
 
 #include "../Definitions.h"
+#include "../SimulationData.h"
 
 CubismUP_3D_NAMESPACE_BEGIN
 
-/// Export `component`th component of the fluid elements to the contiguous
-/// fully refined matrix.
-void exportGridFieldToUniformMatrix(
-    FluidGridMPI *grid, int component, Real * __restrict__ out);
+enum FieldExportId
+{
+  FE_CHI = 0,
+  FE_U = 1,
+  FE_V = 2,
+  FE_W = 3,
+  FE_P = 4,
+  FE_TMPU = 5,
+  FE_TMPV = 6,
+  FE_TMPW = 7
+};
 
-/// Import `component`th component of the fluid elements from the contiguous
-/// fully refined matrix.
+/// Export one field component to a contiguous fully refined matrix.
+void exportGridFieldToUniformMatrix(
+    SimulationData &sim, int component, Real * __restrict__ out);
+
+/// Import one field component from a contiguous fully refined matrix.
 void importGridFieldFromUniformMatrix(
-    FluidGridMPI *grid, int component, const Real * __restrict__ out);
+    SimulationData &sim, int component, const Real * __restrict__ in);
 
 CubismUP_3D_NAMESPACE_END
