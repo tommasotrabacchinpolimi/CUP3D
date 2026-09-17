@@ -34,7 +34,7 @@ set(PYLIB "libcubismup3d")
 set(CUP_BLOCK_SIZE "8" CACHE STRING "Number of grid points in a block, per dimension")
 set(CUP_ROOT_DIR "${ROOT_DIR}" CACHE INTERNAL "CubismUP_3D repository root path")
 set(CUP_BUILD_DIR "${BUILD_DIR}" CACHE INTERNAL "CubismUP_3D build path")
-option(CUP_BUILD_EXE "Build the executable" OFF)
+option(CUP_BUILD_EXE "Build the executable" ON)
 option(CUP_BUILD_LIB "Build the static library" OFF)
 option(CUP_BUILD_PY "Build Python bindings" ON)
 option(CUP_TESTS "Enable tests" OFF)
@@ -93,6 +93,8 @@ set(CORE_SOURCE
     "${SRC_DIR}/operators/ObstaclesUpdate.cpp"
     "${SRC_DIR}/operators/Penalization.cpp"
     "${SRC_DIR}/operators/PressureProjection.cpp"
+    "${SRC_DIR}/operators/SchoolControl.cpp"
+    "${SRC_DIR}/Utils/WangSchoolPID.cpp"
     "${SRC_DIR}/poisson/DiffusionSolverAMRKernels.cpp"
     "${SRC_DIR}/poisson/PoissonSolverAMR.cpp"
     "${SRC_DIR}/poisson/PoissonSolverAMRKernels.cpp"

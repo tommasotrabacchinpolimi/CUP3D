@@ -139,6 +139,23 @@ struct SimulationData
   Real DiffusionErrorTol;
   Real DiffusionErrorTolRel;
 
+  // Wang–PD school control (StefanFish act({b,a}))
+  bool schoolControl = false;
+  int schoolK = 1;
+  Real schoolGammaAtt = 0.04;
+  Real schoolGammaAli = 0.20;
+  Real schoolGammaR = 0.20;
+  Real schoolDecide = 0.5;
+  Real schoolV0Cm = 14.0; // Wang cruise (cm); scaled by lengthScale → sim speed
+  Real schoolKpPhi = 1.2;
+  Real schoolKdPhi = 0.25;
+  Real schoolKpV = 0.08;
+  Real schoolBMax = 1.5;
+  Real schoolAMax = 0.5;
+  Real schoolLengthScale = 0; // <=0 → auto L_mean/3.1
+  unsigned schoolSeed = 71;
+  int schoolLogEvery = 20; // log every N steps (0 = off)
+
   void startProfiler(std::string name) const;
   void stopProfiler() const;
   void printResetProfiler();

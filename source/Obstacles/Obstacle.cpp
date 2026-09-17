@@ -58,11 +58,15 @@ Obstacle::Obstacle(SimulationData& s,  ArgumentParser& parser): sim(s)
   bForcedInSimFrame[0] = bFSM_alldir || parser("-bForcedInSimFrame_x").asBool(false);
   bForcedInSimFrame[1] = bFSM_alldir || parser("-bForcedInSimFrame_y").asBool(false);
   bForcedInSimFrame[2] = bFSM_alldir || parser("-bForcedInSimFrame_z").asBool(false);
-  // only active if corresponding bForcedInLabFrame is true:
+  // only used as imposed velocity when bForcedInSimFrame_* is true;
+  // always used as initial transVel so free fish can start with a nonzero speed.
   Real enforcedVelocity [3];
   enforcedVelocity[0] = -parser("-xvel").asDouble(0.0);
   enforcedVelocity[1] = -parser("-yvel").asDouble(0.0);
   enforcedVelocity[2] = -parser("-zvel").asDouble(0.0);
+  transVel[0] = enforcedVelocity[0];
+  transVel[1] = enforcedVelocity[1];
+  transVel[2] = enforcedVelocity[2];
   const bool bFixToPlanar = parser("-bFixToPlanar").asBool(false);
   // this is different, obstacle can change the velocity, but sim frame will follow:
   bool bFOR_alldir = parser("-bFixFrameOfRef").asBool(false);
@@ -152,8 +156,12 @@ void Obstacle::computeVelocities()
 
   // TODO here we can add dt * appliedForce/Torque[i]
   double b[6] = { //need to use double (not Real) for GSL
-    penalLmom[0], penalLmom[1], penalLmom[2],
-    penalAmom[0], penalAmom[1], penalAmom[2]
+    penalLmom[0] + (double)(sim.dt * appliedForce[0]),
+    penalLmom[1] + (double)(sim.dt * appliedForce[1]),
+    penalLmom[2] + (double)(sim.dt * appliedForce[2]),
+    penalAmom[0] + (double)(sim.dt * appliedTorque[0]),
+    penalAmom[1] + (double)(sim.dt * appliedTorque[1]),
+    penalAmom[2] + (double)(sim.dt * appliedTorque[2])
   };
 
   // modify y-velocity for symmetry breaking
@@ -266,6 +274,9 @@ void Obstacle::computeVelocities()
       angVel[2] = oz_collision;
   }
 
+  // One-shot external loads (controller must re-set each step if needed).
+  appliedForce  = {{0,0,0}};
+  appliedTorque = {{0,0,0}};
 }
 
 void Obstacle::computeForces()

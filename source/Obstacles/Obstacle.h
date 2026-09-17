@@ -49,6 +49,12 @@ public:
   std::array<bool, 3> bBlockRotation    = {{false, false, false}};//set to true if obstacle is not allowed to rotate (forced)
   std::array<Real, 3> transVel_imposed  = {{0,0,0}}; //prescribed velocity (if the obstacle is forced)
 
+  // External force/torque applied each step (impulse = F*dt added to momentum RHS).
+  // Set by a controller before UpdateObstacles; cleared after computeVelocities().
+  // Ignored on DOFs with bForcedInSimFrame / bBlockRotation (those velocities are prescribed).
+  std::array<Real, 3> appliedForce  = {{0,0,0}};
+  std::array<Real, 3> appliedTorque = {{0,0,0}};
+
   //auxiliary arrays used for 2nd order time integration of obstacle's position
   Real old_position  [3] =   {0,0,0};
   Real old_absPos    [3] =   {0,0,0};

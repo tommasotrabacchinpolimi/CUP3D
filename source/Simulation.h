@@ -24,6 +24,8 @@ public:
   void setupOperators();
   void setupGrid();
   void _ic();
+  /// SchoolControl (if enabled) then CreateObstacles — used wherever code used to call pipeline[0].
+  void createObstacles(Real dt = 0);
 
   //Simulation(MPI_Comm mpicomm, cubism::ArgumentParser &parser);
   Simulation(int argc, char ** argv, MPI_Comm comm);

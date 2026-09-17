@@ -7,6 +7,7 @@
 #include "Simulation.h"
 
 #include "operators/InitialConditions.h"
+#include "operators/SchoolControl.h"
 #include "operators/ObstaclesCreate.h"
 #include "operators/AdvectionDiffusion.h"
 #include "operators/AdvectionDiffusionImplicit.h"
@@ -80,10 +81,10 @@ void Simulation::init()
   sim.obstacle_vector = new ObstacleVector(sim);
   ObstacleFactory(sim).addObstacles(parser);
 
-  // CreateObstacles
+  // CreateObstacles (and SchoolControl if enabled — must not assume pipeline[0])
   if( sim.verbose )
     std::cout << "[CUP3D] Creating Obstacles.. " << std::endl;
-  (*sim.pipeline[0])(0);
+  createObstacles(0);
 
   // Initialize Flow Field
   if( sim.verbose )
@@ -103,13 +104,29 @@ void Simulation::init()
   }
 }
 
+void Simulation::createObstacles(Real dt)
+{
+  // pipeline[0] used to be CreateObstacles; SchoolControl may now sit in front.
+  for (size_t c = 0; c < sim.pipeline.size(); ++c) {
+    const std::string name = sim.pipeline[c]->getName();
+    if (name == "SchoolControl" || name == "CreateObstacles")
+      (*sim.pipeline[c])(dt);
+    if (name == "CreateObstacles")
+      return;
+  }
+  fprintf(stderr, "[CUP3D] CreateObstacles operator missing from pipeline\n");
+  fflush(0);
+  abort();
+}
+
 void Simulation::initialGridRefinement()
 {
   // CreateObstacles and set initial conditions
-  (*sim.pipeline[0])(0);
+  createObstacles(0);
   _ic();
 
   const int lmax = sim.StaticObstacles ? sim.levelMax : 3*sim.levelMax;
+  int idle = 0;
   for (int l = 0 ; l < lmax ; l++)
   {
     if( sim.verbose )
@@ -120,8 +137,19 @@ void Simulation::initialGridRefinement()
 
     //set initial conditions again. If this is not done, we start with the refined (interpolated) 
     //version of the ic, which is less accurate
-    (*sim.pipeline[0])(0);
+    createObstacles(0);
     _ic();
+
+    // Stop once AMR is idle (avoids many no-op passes at 3*levelMax).
+    if (!sim.MeshChanged) {
+      if (++idle >= 2) {
+        if (sim.verbose)
+          std::cout << "[CUP3D] - mesh settled after refinement " << l << ", skipping remaining init AMR\n";
+        break;
+      }
+    } else {
+      idle = 0;
+    }
   }
 }
 
@@ -176,6 +204,10 @@ void Simulation::setupGrid()
 
 void Simulation::setupOperators()
 {
+  // Wang–PD school policy must run before midline/geometry rebuild.
+  if (sim.schoolControl)
+    sim.pipeline.push_back(std::make_shared<SchoolControl>(sim));
+
   // Creates the char function, sdf, and def vel for all obstacles at the curr
   // timestep. At this point we do NOT know the translation and rot vel of the
   // obstacles. We need to solve implicit system when the pre-penalization vel
@@ -293,7 +325,7 @@ void Simulation::deserialize()
     ScalarBlock& LHS  = *(ScalarBlock*)  lhsInfo[i].ptrBlock;  LHS.clear();
     VectorBlock& TMPV = *(VectorBlock*) tmpVInfo[i].ptrBlock; TMPV.clear();
   }
-  (*sim.pipeline[0])(0);
+  createObstacles(0);
   sim.readRestartFiles();
 }
 

@@ -129,6 +129,23 @@ SimulationData::SimulationData(MPI_Comm mpicomm, ArgumentParser &parser): comm(m
   dumpVelocityX = parser("-dumpVelocityX").asBool(false);
   dumpVelocityY = parser("-dumpVelocityY").asBool(false);
   dumpVelocityZ = parser("-dumpVelocityZ").asBool(false);
+
+  // Wang–PD school control
+  schoolControl = parser("-schoolControl").asBool(false);
+  schoolK = parser("-schoolK").asInt(1);
+  schoolGammaAtt = parser("-schoolGammaAtt").asDouble(0.04);
+  schoolGammaAli = parser("-schoolGammaAli").asDouble(0.20);
+  schoolGammaR = parser("-schoolGammaR").asDouble(0.20);
+  schoolDecide = parser("-schoolDecide").asDouble(0.5);
+  schoolV0Cm = parser("-schoolV0Cm").asDouble(14.0);
+  schoolKpPhi = parser("-schoolKpPhi").asDouble(1.2);
+  schoolKdPhi = parser("-schoolKdPhi").asDouble(0.25);
+  schoolKpV = parser("-schoolKpV").asDouble(0.08);
+  schoolBMax = parser("-schoolBMax").asDouble(1.5);
+  schoolAMax = parser("-schoolAMax").asDouble(0.5);
+  schoolLengthScale = parser("-schoolLengthScale").asDouble(0.0);
+  schoolSeed = (unsigned)parser("-schoolSeed").asInt(71);
+  schoolLogEvery = parser("-schoolLogEvery").asInt(20);
 }
 
 void SimulationData::_preprocessArguments()
