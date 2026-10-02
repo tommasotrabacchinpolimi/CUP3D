@@ -1,6 +1,6 @@
 //
 //  CubismUP_3D
-//  Wang setpoints → hybrid plant: appliedForce surge + StefanFish::act({b}) yaw.
+//  Wang setpoints → StefanFish kinematics: Turn(b) + period(a) on half-period clock.
 //
 
 #pragma once
@@ -30,9 +30,10 @@ private:
   bool warnedCorrectPosition = false;
   std::ofstream log;
   int logEvery = 20;
-  // Turn(b) is a wave-shift event — call sparsely, hold b between calls.
+  // Turn(b) and period(a) are wave events — call sparsely, hold between calls.
   std::vector<Real> tLastAct;
   std::vector<Real> bHeld;
+  std::vector<Real> aHeld;
 };
 
 CubismUP_3D_NAMESPACE_END

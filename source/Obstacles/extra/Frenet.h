@@ -11,6 +11,7 @@
 
 #include "../../Definitions.h"
 
+#include <cmath>
 #include <limits>
 
 CubismUP_3D_NAMESPACE_BEGIN

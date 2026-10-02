@@ -67,6 +67,7 @@ include("${ROOT_DIR}/cmake/Dependencies.cmake")
 # Targets.
 set(CORE_SOURCE
     "${SRC_DIR}/Obstacles/CarlingFish.cpp"
+    "${SRC_DIR}/Obstacles/BurstAndCoastFish.cpp"
     "${SRC_DIR}/Obstacles/Cylinder.cpp"
     "${SRC_DIR}/Obstacles/CylinderNozzle.cpp"
     "${SRC_DIR}/Obstacles/Ellipsoid.cpp"

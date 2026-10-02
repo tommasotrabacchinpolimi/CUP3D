@@ -9,6 +9,9 @@
 CubismUP_3D_NAMESPACE_BEGIN
 using namespace cubism;
 
+// Take the action vector from StefanFish::act and turn it into midline
+// commands. One number: Turn. Three: Turn plus a new period. Five: also
+// torsion. Any other length, including two, is ignored on purpose.
 void CurvatureDefinedFishData::execute(const Real time, const Real l_tnext, const std::vector<Real>& input)
 {
   if (input.size() == 1)
@@ -52,6 +55,9 @@ void CurvatureDefinedFishData::execute(const Real time, const Real l_tnext, cons
   }
 }
 
+// Build this step's spine: ramp the period if a change is scheduled, fill
+// kappa from the traveling sine plus Turn plus beta, integrate Frenet frames,
+// then pitch with gamma if the PID asked for it.
 void CurvatureDefinedFishData::computeMidline(const Real t, const Real dt)
 {
   periodScheduler.transition(t,transition_start,transition_start+transition_duration,current_period,next_period);
@@ -110,6 +116,8 @@ void CurvatureDefinedFishData::computeMidline(const Real t, const Real dt)
   performPitchingMotion(t);
 }
 
+// Wrap the planar midline onto a cylinder of radius 1/gamma so the fish
+// pitches in z. If gamma is essentially zero we leave the spine flat.
 void CurvatureDefinedFishData::performPitchingMotion(const Real t)
 {
   Real R,Rdot;
@@ -159,9 +167,10 @@ void CurvatureDefinedFishData::performPitchingMotion(const Real t)
   recomputeNormalVectors();
 }
 
+// After pitching, the old normals no longer sit on the spine. Rebuild them
+// (and the binormals) from neighboring midline points.
 void CurvatureDefinedFishData::recomputeNormalVectors()
 {
-  //compute normal and binormal vectors for a given midline
   #pragma omp parallel for
   for(int i=1; i<Nm-1; i++)
   {
@@ -259,6 +268,8 @@ void CurvatureDefinedFishData::recomputeNormalVectors()
   }
 }
 
+// Write enough of the gait to restart without resetting the wave: the four
+// schedulers go to a side file, the PID/RL scalars into the shared FILE.
 void StefanFish::saveRestart( FILE * f )
 {
   assert(f != NULL);
@@ -341,6 +352,8 @@ void StefanFish::saveRestart( FILE * f )
   fprintf(f,"dgamma                   : %20.20e\n",(double)cFish->dgamma                   );
 }
 
+// Read what saveRestart wrote. If the scalar block is short we abort rather
+// than swim on with a half-initialized midline.
 void StefanFish::loadRestart( FILE * f )
 {
   assert(f != NULL);
@@ -427,6 +440,8 @@ void StefanFish::loadRestart( FILE * f )
   }
 }
 
+// Construct the obstacle, then the curvature midline, width/height profiles,
+// and optional station-keeping PID. PID is refused unless q = (1,0,0,0).
 StefanFish::StefanFish(SimulationData & s, ArgumentParser&p) : Fish(s, p)
 {
   const Real Tperiod     = p("-T"               ).asDouble(1.0);
@@ -457,6 +472,8 @@ StefanFish::StefanFish(SimulationData & s, ArgumentParser&p) : Fish(s, p)
   wzp = p("-wzp").asDouble(1.0);
 }
 
+// Clamp a PID command and its time derivative so the midline cannot jump
+// when the error is large or the timestep is noisy.
 static void clip_quantities(const Real fmax, const Real dfmax, const Real dt, const bool zero, const Real fcandidate, const Real dfcandidate, Real & f, Real & df)
 {
     if (zero)
@@ -481,6 +498,8 @@ static void clip_quantities(const Real fmax, const Real dfmax, const Real dt, co
     }
 }
 
+// If a CorrectPosition flag is on, turn pose error into alpha/beta/gamma.
+// Then rasterize the current midline onto the grid (chi and udef).
 void StefanFish::create()
 {
   auto * const cFish = dynamic_cast<CurvatureDefinedFishData*>( myFish );
@@ -570,6 +589,8 @@ void StefanFish::create()
   Fish::create();
 }
 
+// First let the fluid decide U and omega. If bCorrectRoll, then strip spin
+// about the long axis and add a small damping term that drives roll to zero.
 void StefanFish::computeVelocities()
 {
   Obstacle::computeVelocities();
@@ -668,6 +689,10 @@ void StefanFish::computeVelocities()
 //Reinforcement Learning functions
 //////////////////////////////////
 
+// RL/school entry point: copy the action vector and call execute().
+// Planar fish (forced in z) used to mean "no pitching", so we zero a[1]
+// in that case — which also wipes a period action. Prefer the explicit
+// action_curvature / action_period helpers if you need both turn and speed.
 void StefanFish::act(const Real t_rlAction, const std::vector<Real>& a) const
 {
   auto * const cFish = dynamic_cast<CurvatureDefinedFishData*>( myFish );
@@ -682,6 +707,8 @@ void StefanFish::act(const Real t_rlAction, const std::vector<Real>& a) const
   cFish->execute(sim.time, t_rlAction, actions);
 }
 
+// Period we are heading toward. Wait half of this between Turn/period
+// decisions so the last bend can travel down the body.
 Real StefanFish::getLearnTPeriod() const
 {
   auto * const cFish = dynamic_cast<CurvatureDefinedFishData*>( myFish );
@@ -689,6 +716,8 @@ Real StefanFish::getLearnTPeriod() const
   return cFish->next_period;
 }
 
+// Where we are in the beat, wrapped to [0, 2 pi). Same argument that
+// computeMidline uses for sin(arg).
 Real StefanFish::getPhase(const Real t) const
 {
   auto * const cFish = dynamic_cast<CurvatureDefinedFishData*>( myFish );
@@ -700,6 +729,8 @@ Real StefanFish::getPhase(const Real t) const
   return (phase<0) ? 2*M_PI + phase : phase;
 }
 
+// Pack pose, phase, scaled velocities, recent bends, and three head shears
+// into the vector an RL policy reads.
 std::vector<Real> StefanFish::state() const
 {
   auto * const cFish = dynamic_cast<CurvatureDefinedFishData*>( myFish );
@@ -748,6 +779,8 @@ std::vector<Real> StefanFish::state() const
   return S;
 }
 
+// Find which velocity block on this rank contains pos. Return -1 if the
+// point belongs to another MPI rank (or sits off the local grid).
 ssize_t StefanFish::holdingBlockID(const std::array<Real,3> pos) const
 {
   const std::vector<cubism::BlockInfo>& velInfo = sim.velInfo();
@@ -772,7 +805,8 @@ ssize_t StefanFish::holdingBlockID(const std::array<Real,3> pos) const
   return -1; // rank does not contain point
 };
 
-// returns shear at given surface location
+// Viscous traction at the surface sample nearest pSurf. Only the owning
+// rank fills it; everyone MPI_Allreduces so the returned vector is global.
 std::array<Real, 3> StefanFish::getShear(const std::array<Real,3> pSurf) const
 {
   const std::vector<cubism::BlockInfo>& velInfo = sim.velInfo(); 

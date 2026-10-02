@@ -19,10 +19,10 @@ mkdir -p ${FOLDER}
 
 cp $SETTINGSNAME ${FOLDER}/settings.sh
 [[ -n "${FFACTORY}" ]] && cp ${FFACTORY} ${FOLDER}/factory
-cp ../bin/simulation ${FOLDER}
+cp ../build/cubismup3d_simulation ${FOLDER}
 
 cd $FOLDER
 
 export OMP_NUM_THREADS=4
 echo "$OPTIONS" > settings.txt
-mpirun -np 1 ./simulation ${OPTIONS} -factory-content "${FACTORY}"
+mpirun -np 1 ./cubismup3d_simulation ${OPTIONS} -factory-content "${FACTORY}"
