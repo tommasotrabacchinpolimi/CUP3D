@@ -6,9 +6,9 @@ import numpy as np
 # Match launch/settingsBurstAndCoastFish.sh and BurstAndCoastFish.cpp
 length = 0.2
 amplitudeFactor = 1.0
-T_bout = 0.5
-lmbda = 0.2 * length
-lmbda_bout = 2.0 * length
+T_bout = 0.3
+lmbda = 0.5 * length
+lmbda_bout = 1.8 * length
 c = lmbda_bout / T_bout
 
 a_x = [0, 0.2, 1]

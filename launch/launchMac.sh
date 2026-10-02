@@ -25,4 +25,4 @@ cd $FOLDER
 
 export OMP_NUM_THREADS=4
 echo "$OPTIONS" > settings.txt
-mpirun -np 1 ./cubismup3d_simulation ${OPTIONS} -factory-content "${FACTORY}"
+mpirun -np 6 ./cubismup3d_simulation ${OPTIONS} -factory-content "${FACTORY}"

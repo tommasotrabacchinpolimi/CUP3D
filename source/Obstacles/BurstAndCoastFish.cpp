@@ -22,10 +22,12 @@ class BurstandCoastFishMidlineData : public FishMidlineData
 
  public:
   // L=length, T=period, phi=phase shift, _h=grid size, A=amplitude modulation
-  BurstandCoastFishMidlineData(Real L, Real T, Real phi, Real _h, Real A) :
+  // lmbda, lmbda_bout are physical lengths (not fractions of L)
+  BurstandCoastFishMidlineData(Real L, Real T, Real phi, Real _h, Real A,
+    Real lmbda_, Real lmbda_bout_) :
   FishMidlineData(L,T,phi,_h,A),
   c2(0.1625), c1(-0.0825), c0(0.02),
-  lmbda(0.2 * L), lmbda_bout(2.0 * L), T_bout(T), c((2.0 * L) / T)
+  lmbda(lmbda_), lmbda_bout(lmbda_bout_), T_bout(T), c(lmbda_bout_ / T)
   {
   }
 
@@ -177,9 +179,14 @@ BurstandCoastFish::BurstandCoastFish(SimulationData&s, ArgumentParser&p) : Fish(
   const Real ampFac = p("-amplitudeFactor").asDouble(1.0);
   const Real Tperiod = p("-T").asDouble(1.0);
   const Real phaseShift = p("-phi").asDouble(0.0);
+  // Fractions of L. Do not use "-lambda": that is the penalization coefficient.
+  const Real lmbda = p("-lambdaWave").asDouble(0.5) * length;
+  const Real lmbda_bout = p("-lambdaBout").asDouble(1.8) * length;
+  if (p("-bHoldHeading").asBool(true))
+    bBlockRotation[2] = true;
 
   BurstandCoastFishMidlineData* localFish = new BurstandCoastFishMidlineData(
-    length, Tperiod, phaseShift, sim.hmin, ampFac);
+    length, Tperiod, phaseShift, sim.hmin, ampFac, lmbda, lmbda_bout);
 
   assert(myFish == nullptr);
   myFish = (FishMidlineData*) localFish;
@@ -190,8 +197,9 @@ BurstandCoastFish::BurstandCoastFish(SimulationData&s, ArgumentParser&p) : Fish(
     myFish->rS, myFish->height, myFish->width, myFish->Nm, sim.rank);
 
   if(!sim.rank)
-    printf("BurstandCoastFish: N:%d, L:%f, T:%f, phi:%f, amplitude:%f\n",
-        myFish->Nm, length, Tperiod, phaseShift, ampFac);
+    printf("BurstandCoastFish: N:%d, L:%f, T:%f, phi:%f, amplitude:%f, lambda:%f, lambda_bout:%f, holdHeading:%d\n",
+        myFish->Nm, length, Tperiod, phaseShift, ampFac, lmbda, lmbda_bout,
+        (int)bBlockRotation[2]);
 }
 
 CubismUP_3D_NAMESPACE_END
